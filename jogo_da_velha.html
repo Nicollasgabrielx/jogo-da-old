@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jogo da Velha</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f1;
+    --surface: #efefeb;
+    --card: #ffffff;
+    --border: rgba(0,0,0,0.12);
+    --border-em: rgba(0,0,0,0.25);
+    --text-primary: #1a1a18;
+    --text-secondary: #6b6b66;
+    --text-hint: #a0a09a;
+    --x-color: #534AB7;
+    --x-bg: #EEEDFE;
+    --x-border: #AFA9EC;
+    --o-color: #0F6E56;
+    --o-bg: #E1F5EE;
+    --o-border: #5DCAA5;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --surface: #252523;
+      --card: #2e2e2b;
+      --border: rgba(255,255,255,0.1);
+      --border-em: rgba(255,255,255,0.22);
+      --text-primary: #f0efe8;
+      --text-secondary: #9a9990;
+      --text-hint: #6a6a62;
+      --x-color: #AFA9EC;
+      --x-bg: #26215C;
+      --x-border: #534AB7;
+      --o-color: #5DCAA5;
+      --o-bg: #04342C;
+      --o-border: #1D9E75;
+    }
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .game-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2.5rem 1.5rem;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .game-title {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-hint);
+    margin-bottom: 1.75rem;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 99px;
+    margin-bottom: 1.25rem;
+  }
+  .badge.x { background: var(--x-bg); color: var(--x-color); }
+  .badge.o { background: var(--o-bg); color: var(--o-color); }
+
+  .scoreboard {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .score-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 22px;
+    text-align: center;
+    min-width: 84px;
+    transition: border-color 0.2s;
+  }
+  .score-card.active { border-color: var(--border-em); }
+
+  .score-label {
+    font-size: 10px;
+    color: var(--text-hint);
+    margin-bottom: 4px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .score-num {
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  .score-card.x-card .score-num { color: var(--x-color); }
+  .score-card.o-card .score-num { color: var(--o-color); }
+
+  .status {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 1.25rem;
+    min-height: 22px;
+    font-weight: 400;
+    text-align: center;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 100px);
+    grid-template-rows: repeat(3, 100px);
+    gap: 8px;
+    margin-bottom: 1.75rem;
+  }
+
+  .cell {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 38px;
+    font-weight: 500;
+    transition: background 0.15s, transform 0.1s, border-color 0.2s;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .cell:hover:not(.taken):not(.blocked) {
+    background: var(--card);
+    border-color: var(--border-em);
+  }
+  .cell:active:not(.taken):not(.blocked) { transform: scale(0.94); }
+  .cell.taken, .cell.blocked { cursor: default; }
+  .cell.x { color: var(--x-color); }
+  .cell.o { color: var(--o-color); }
+  .cell.win-cell.x { background: var(--x-bg); border-color: var(--x-border); }
+  .cell.win-cell.o { background: var(--o-bg); border-color: var(--o-border); }
+
+  .btn-reset {
+    background: transparent;
+    border: 0.5px solid var(--border-em);
+    border-radius: var(--radius-md);
+    padding: 10px 24px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+  }
+  .btn-reset:hover { background: var(--surface); color: var(--text-primary); }
+  .btn-reset:active { transform: scale(0.97); }
+</style>
+</head>
+<body>
+
+<div class="game-wrap">
+  <p class="game-title">Jogo da Velha</p>
+  <div id="badge-wrap"></div>
+
+  <div class="scoreboard">
+    <div class="score-card x-card" id="card-x">
+      <div class="score-label" id="label-x">X</div>
+      <div class="score-num" id="score-x">0</div>
+    </div>
+    <div class="score-card" id="card-draw">
+      <div class="score-label">Empate</div>
+      <div class="score-num" id="score-draw">0</div>
+    </div>
+    <div class="score-card o-card" id="card-o">
+      <div class="score-label" id="label-o">O</div>
+      <div class="score-num" id="score-o">0</div>
+    </div>
+  </div>
+
+  <p class="status" id="status"></p>
+
+  <div class="board" id="board">
+    <div class="cell" data-i="0"></div><div class="cell" data-i="1"></div><div class="cell" data-i="2"></div>
+    <div class="cell" data-i="3"></div><div class="cell" data-i="4"></div><div class="cell" data-i="5"></div>
+    <div class="cell" data-i="6"></div><div class="cell" data-i="7"></div><div class="cell" data-i="8"></div>
+  </div>
+
+  <button class="btn-reset" id="btn-reset">Nova partida</button>
+</div>
+
+<script>
+  const WINS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  let board, playerSymbol, aiSymbol, currentTurn, over;
+  let scores = {X:0, O:0, D:0};
+
+  const cells = document.querySelectorAll('.cell');
+  const statusEl = document.getElementById('status');
+  const badgeWrap = document.getElementById('badge-wrap');
+
+  function symColor(s) { return s === 'X' ? 'var(--x-color)' : 'var(--o-color)'; }
+
+  function checkWinner(b) {
+    for (const [a, c, d] of WINS) {
+      if (b[a] && b[a] === b[c] && b[a] === b[d]) return { winner: b[a], line: [a, c, d] };
+    }
+    if (b.every(v => v)) return { winner: 'draw' };
+    return null;
+  }
+
+  function minimax(b, isAI) {
+    const res = checkWinner(b);
+    if (res) {
+      if (res.winner === aiSymbol) return 10;
+      if (res.winner === 'draw') return 0;
+      return -10;
+    }
+    const s = [];
+    for (let i = 0; i < 9; i++) {
+      if (!b[i]) {
+        b[i] = isAI ? aiSymbol : playerSymbol;
+        s.push(minimax(b, !isAI));
+        b[i] = null;
+      }
+    }
+    return isAI ? Math.max(...s) : Math.min(...s);
+  }
+
+  function bestMove() {
+    let best = -Infinity, move = -1;
+    for (let i = 0; i < 9; i++) {
+      if (!board[i]) {
+        board[i] = aiSymbol;
+        const s = minimax(board, false);
+        board[i] = null;
+        if (s > best) { best = s; move = i; }
+      }
+    }
+    return move;
+  }
+
+  function blockCells(block) {
+    cells.forEach(c => block ? c.classList.add('blocked') : c.classList.remove('blocked'));
+  }
+
+  function highlightActive() {
+    document.getElementById('card-x').classList.toggle('active', currentTurn === 'X');
+    document.getElementById('card-o').classList.toggle('active', currentTurn === 'O');
+  }
+
+  function aiPlay() {
+    blockCells(true);
+    setTimeout(() => {
+      if (over) return;
+      const move = bestMove();
+      board[move] = aiSymbol;
+      const cell = cells[move];
+      cell.textContent = aiSymbol;
+      cell.classList.add('taken', aiSymbol.toLowerCase());
+      const res = checkWinner(board);
+      if (res) { endGame(res); return; }
+      currentTurn = playerSymbol;
+      blockCells(false);
+      statusEl.innerHTML = 'Sua vez';
+      highlightActive();
+    }, 500);
+  }
+
+  function endGame(res) {
+    over = true;
+    blockCells(true);
+    document.getElementById('card-x').classList.remove('active');
+    document.getElementById('card-o').classList.remove('active');
+    if (res.winner === 'draw') {
+      scores.D++;
+      document.getElementById('score-draw').textContent = scores.D;
+      statusEl.innerHTML = 'Empatou!';
+    } else {
+      const w = res.winner;
+      scores[w]++;
+      document.getElementById('score-' + w.toLowerCase()).textContent = scores[w];
+      res.line.forEach(i => cells[i].classList.add('win-cell'));
+      const msg = w === playerSymbol ? 'Você venceu! 🎉' : 'IA venceu!';
+      statusEl.innerHTML = `<span style="color:${symColor(w)};font-weight:500">${msg}</span>`;
+    }
+  }
+
+  function initGame() {
+    board = Array(9).fill(null);
+    over = false;
+    cells.forEach(c => { c.textContent = ''; c.className = 'cell'; });
+    blockCells(false);
+
+    playerSymbol = Math.random() < 0.5 ? 'X' : 'O';
+    aiSymbol = playerSymbol === 'X' ? 'O' : 'X';
+    currentTurn = 'X';
+
+    document.getElementById('label-x').textContent = playerSymbol === 'X' ? 'Você' : 'IA';
+    document.getElementById('label-o').textContent = playerSymbol === 'O' ? 'Você' : 'IA';
+    badgeWrap.innerHTML = `<span class="badge ${playerSymbol.toLowerCase()}">Você é ${playerSymbol}</span>`;
+
+    if (playerSymbol === 'X') {
+      statusEl.innerHTML = 'Sua vez';
+      highlightActive();
+    } else {
+      statusEl.innerHTML = 'IA começa...';
+      highlightActive();
+      aiPlay();
+    }
+  }
+
+  cells.forEach(cell => {
+    cell.addEventListener('click', () => {
+      const i = +cell.dataset.i;
+      if (over || board[i] || currentTurn !== playerSymbol || cell.classList.contains('blocked')) return;
+      board[i] = playerSymbol;
+      cell.textContent = playerSymbol;
+      cell.classList.add('taken', playerSymbol.toLowerCase());
+      const res = checkWinner(board);
+      if (res) { endGame(res); return; }
+      currentTurn = aiSymbol;
+      highlightActive();
+      statusEl.innerHTML = 'IA pensando...';
+      aiPlay();
+    });
+  });
+
+  document.getElementById('btn-reset').addEventListener('click', initGame);
+  initGame();
+</script>
+</body>
+</html>
